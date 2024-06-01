@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+
+*{
+    padding:0;
+    margin:0;
+    box-sizing:border-box;
+    font-family: "Poppins",sans-serif;
+}
+
+.shop{
+    background:url('../Images/3.jpg');
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    width:100%;
+    height:130vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+}
+
+.shop_container{
+    width:90%;
+    height:120vh;
+    position: relative;
+
+}
+
+.shop_container .headers{
+  
+    height:180px;
+    width:100%;
+}
+
+.shop_container .headers .header{
+    font-size: 2.9rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.shop_container .headers .subheader{
+    text-align: center;
+    font-size: 1.6rem;
+    color:rgb(145,145,145);
+}
+
+
+.shop_container .shop_boxes{
+    background-color: skyblue;
+    border-radius: 80px;
+    width:100%; 
+    height:800px;
+    padding:40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-gap: 10px; /* Adjust the gap between the boxes as needed */
+    position: inherit;
+}
+
+.shop_container .shop_boxes .shop_box{
+    background-color: white;
+    height:300px;
+    width:300px;
+    cursor:pointer;
+    border-radius: 20px;
+    padding:40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 5px 5px 20px 10px rgb(0,0,0,0.7);
+}
+
+    .shop_container .shop_boxes .shop_box .snack_image{
+        height:150px;
+        width:150px;
+        border-radius: 50%;
+        background-position: center center;
+        background-size: cover;
+    }
+
+
+.shop_container .shop_boxes .shop_box .snack_name{
+    color:black;
+    font-size:32px;
+    font-weight:600;
+
+}
+
+.shop_container .shop_boxes .shop_box .snack_price{
+    background-color: yellow;
+    padding:11px;
+    color:black;
+    border-radius: 8px;
+
+}
+
+
+.shop_container .shop_boxes .shop_box .snack_price{
+    background-color: yellow;
+    padding:11px;
+    color:black;
+    border-radius: 8px;
+    cursor:pointer;
+
+}
+
+
+.msg{
+    position: absolute;
+    height:70px;
+    width:800px;
+    background-color: red;
+    margin-left: 20%;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    color:aliceblue;
+    font-weight: 500;
+}

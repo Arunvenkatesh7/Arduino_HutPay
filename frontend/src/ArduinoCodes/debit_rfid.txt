@@ -1,0 +1,168 @@
+#include <SPI.h>      // Include the SPI bus library
+#include <MFRC522.h>  // Include the RFID reader library
+#include <LiquidCrystal_I2C.h>  // Include the LiquidCrystal_I2C library
+
+#define SS_PIN 10  // Slave select pin
+#define RST_PIN 5  // Reset pin
+#define DEBIT_PIN 4  // Pin for the debit alarm
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // Initialize LCD with I2C address 0x27, 16 columns, and 2 rows
+MFRC522 mfrc522(SS_PIN, RST_PIN);  // Instantiate a MFRC522 reader object.
+MFRC522::MIFARE_Key key;  // Create a MIFARE_Key struct named 'key' to hold the card information
+
+int block = 2;  // Block number to read and write
+
+byte readbackblock[18];  // Array to hold read block data
+
+void setup() {
+    lcd.init();
+    Serial.begin(9600);  // Initialize serial communications with the PC
+    SPI.begin();         // Init SPI bus
+    mfrc522.PCD_Init();  // Init MFRC522 card
+
+    Serial.println("Scan a MIFARE Classic card");
+    lcd.backlight();
+    pinMode(DEBIT_PIN, OUTPUT);  // Set debit alarm pin as output
+
+    // Prepare the security key for the read and write functions.
+    for (byte i = 0; i < 6; i++) {
+        key.keyByte[i] = 0xFF;  // Set key to default value (for testing purposes)
+    }
+}
+
+void loop() {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Welcome to CEG");
+    lcd.setCursor(0, 1);
+    lcd.print("Coffee Hut");
+    delay(250);
+
+    // Wait for the amount to be sent via Serial
+    if (Serial.available()) {
+        int amount = Serial.parseInt();  // Read entered amount
+
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Amount payable:");
+        lcd.setCursor(0, 1);
+        lcd.print(amount);
+        delay(2000);  // Delay to show the payable amount
+    
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Enter your card");
+
+        // Look for new cards
+        if (mfrc522.PICC_IsNewCardPresent()) {
+            // Select one of the cards
+            if (mfrc522.PICC_ReadCardSerial()) {
+                Serial.println("Card selected");
+                lcd.clear();
+                lcd.print("paying amount....");
+
+                // Read the block to get balance
+                readBlock(block, readbackblock);
+                int balance = atoi((char *)&readbackblock[11]);  // Convert balance string to integer
+
+                // Check if balance is sufficient
+                if (balance >= amount) {
+                    // Debit the amount
+                    balance -= amount;
+
+                    // Update balance on card
+                    char balanceStr[6];
+                    sprintf(balanceStr, "%05d", balance);  // Convert integer balance to string
+                    memcpy(&readbackblock[11], balanceStr, 5);  // Copy updated balance to block data
+                    writeBlock(block, readbackblock);  // Write updated block data to card
+
+                    // Display success message on LCD
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("Debit success!");
+                    digitalWrite(DEBIT_PIN, HIGH);  // Activate alarm
+                    delay(30);
+                    digitalWrite(DEBIT_PIN, LOW);  // Deactivate alarm
+                    digitalWrite(DEBIT_PIN, HIGH);  // Activate alarm
+                    delay(30);
+                    digitalWrite(DEBIT_PIN, LOW); 
+                    lcd.setCursor(0, 1);
+                    lcd.print("Balance:");
+                    lcd.print(balance);
+                    delay(2000);
+                } else {
+                    // Insufficient balance, raise alarm
+                    digitalWrite(DEBIT_PIN, HIGH);  // Activate alarm
+                    delay(2000);
+                    digitalWrite(DEBIT_PIN, LOW);  // Deactivate alarm
+
+                    // Display decline message on LCD
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("Insufficient");
+                    lcd.setCursor(0, 1);
+                    lcd.print("balance!");
+                    delay(2000);
+                }
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Thank You");
+                lcd.setCursor(0, 1);
+                lcd.print("Visit Again");
+            }
+        }
+    }
+}
+
+// Read specific block
+int readBlock(int blockNumber, byte arrayAddress[]) {
+    int largestModulo4Number = blockNumber / 4 * 4;
+    int trailerBlock = largestModulo4Number + 3;  // Determine trailer block for the sector
+
+    // Authenticate the desired block for access
+    byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
+
+    if (status != MFRC522::STATUS_OK) {
+        Serial.print("PCD_Authenticate() failed (read): ");
+        Serial.println(mfrc522.GetStatusCodeName(status));
+        return 3;  // Return "3" as error message
+    }
+
+    // Reading a block
+    byte bufferSize = 18;  // Define buffer size
+    status = mfrc522.MIFARE_Read(blockNumber, arrayAddress, &bufferSize);
+
+    if (status != MFRC522::STATUS_OK) {
+        Serial.print("MIFARE_read() failed: ");
+        Serial.println(mfrc522.GetStatusCodeName(status));
+        return 4;  // Return "4" as error message
+    }
+
+    Serial.println("Block was read");
+}
+
+// Write specific block
+int writeBlock(int blockNumber, byte arrayAddress[]) {
+    int largestModulo4Number = blockNumber / 4 * 4;
+    int trailerBlock = largestModulo4Number + 3;  // Determine trailer block for the sector
+
+    // Authenticate the desired block for access
+    byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
+
+    if (status != MFRC522::STATUS_OK) {
+        Serial.print("PCD_Authenticate() failed (write): ");
+        Serial.println(mfrc522.GetStatusCodeName(status));
+        return 3;  // Return "3" as error message
+    }
+
+    // Writing the block
+    status = mfrc522.MIFARE_Write(blockNumber, arrayAddress, 16);
+
+    if (status != MFRC522::STATUS_OK) {
+        Serial.print("MIFARE_Write() failed: ");
+        Serial.println(mfrc522.GetStatusCodeName(status));
+        return 4;  // Return "4" as error message
+    }
+
+    Serial.println("Block was written");
+}
